@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"serpa-cli/internal/files"
 	"serpa-cli/internal/utils"
 )
 
@@ -17,6 +18,8 @@ func Execute() {
 	showVersion := flag.Bool("v", false, "Show version")
 
 	if len(os.Args) == 1 {
+		utils.PrintVersion(toolName, version)
+		fmt.Fprintln(os.Stdout)
 		utils.PrintHelp(toolName)
 		os.Exit(0)
 	}
@@ -29,20 +32,30 @@ func Execute() {
 	}
 
 	if *showVersion {
-		fmt.Printf("%s version %s\n", toolName, version)
+		utils.PrintVersion(toolName, version)
 		return
 	}
 
-	// Serpa Maps server base url must be set. Set it using -u (base-url)
-
 	if *baseUrl == "" {
-		if _, err := os.Stat("categories.csv"); err != nil {
-			fmt.Fprintln(os.Stderr, "Error: No categories.csv found")
-			os.Exit(1)
-		}
-		if _, err := os.Stat("places.csv"); err != nil {
-			fmt.Fprintln(os.Stderr, "Error: No places.csv found")
-			os.Exit(1)
-		}
+		fmt.Fprintln(os.Stderr, "Error: Serpa Maps server base url must be set. Set it using -u (base-url)")
+		os.Exit(1)
 	}
+
+	fileExistsOrExit("categories.csv")
+	fileExistsOrExit("places.csv")
+
+	root := "."
+	folders, images, err := files.CountFoldersAndImages(root)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Printf("Folders: %d, Images: %d\n", folders, images)
+}
+
+func fileExistsOrExit(file string) {
+	if _, err := os.Stat(file); err != nil {
+		fmt.Fprintln(os.Stderr, "Error: No", file, "found")
+		os.Exit(1)
+	} 
 }
