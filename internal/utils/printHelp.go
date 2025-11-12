@@ -6,10 +6,11 @@ import (
 
 func PrintHelp(toolName string) {
 	fmt.Printf("Usage:\n")
-	fmt.Printf("  %s -u <serpa-maps server url>\n\n", toolName)
+	fmt.Printf("  %s -u <serpa-maps server base url> (-a <api version>)\n\n", toolName)
 
 	fmt.Println("Example:")
 	fmt.Printf("  %s -u http://localhost:53164\n", toolName)
+	fmt.Printf("  %s -u http://localhost:53164 -a /api/v1\n", toolName)
 }
 
 func PrintVersion(toolName, version string) {

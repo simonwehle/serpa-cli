@@ -17,6 +17,9 @@ func Execute() {
 	showHelp := flag.Bool("h", false, "Show this help message")
 	showVersion := flag.Bool("v", false, "Show version")
 
+	categoriesFile := "categories.csv"
+	placesFile := "places.csv"
+
 	if len(os.Args) == 1 {
 		utils.PrintVersion(toolName, version)
 		fmt.Fprintln(os.Stdout)
@@ -41,8 +44,13 @@ func Execute() {
 		os.Exit(1)
 	}
 
-	fileExistsOrExit("categories.csv")
-	fileExistsOrExit("places.csv")
+	var (
+		imagesExists = false
+	)
+
+	fileExistsOrExit(categoriesFile)
+	fileExistsOrExit(placesFile)
+	fmt.Printf("Files categories.csv and places.csv exist scanning for images ...")
 
 	root := "."
 	folders, images, err := files.CountFoldersAndImages(root)
@@ -50,7 +58,23 @@ func Execute() {
 		fmt.Println("Error:", err)
 		return
 	}
-	fmt.Printf("Folders: %d, Images: %d\n", folders, images)
+	if images != 0 {
+		fmt.Printf("%d images in %d folders found\n", images, folders)
+	} else {
+		imagesExists = true
+		fmt.Print("No images found; skipping upload assets step")
+	}
+
+	csvCategories, err := files.ReadCategoriesCSV(root, categoriesFile)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+
+	fmt.Printf("CSV categories: %s", csvCategories)
+
+	if imagesExists {
+
+	}
 }
 
 func fileExistsOrExit(file string) {
