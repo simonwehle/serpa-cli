@@ -47,11 +47,11 @@ func Execute() {
 	}
 
 	var (
-		imagesExists = false
+		imagesExist = false
 	)
 
-	fileExistsOrExit(categoriesFile)
-	fileExistsOrExit(placesFile)
+	utils.FileExistsOrExit(categoriesFile)
+	utils.FileExistsOrExit(placesFile)
 	fmt.Printf("Files categories.csv and places.csv exist; scanning for images ...")
 
 	root := "."
@@ -62,8 +62,8 @@ func Execute() {
 	}
 	if images != 0 {
 		fmt.Printf("%d images in %d folders found\n", images, folders)
+		imagesExist = true
 	} else {
-		imagesExists = true
 		fmt.Print("No images found; skipping upload assets step")
 	}
 
@@ -77,28 +77,36 @@ func Execute() {
 		fmt.Println("Error:", err)
 	}
 
+	assets, err := files.ReadAssets(root)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+
 	categoriesDefined, err := utils.CategoriesDefined(csvCategories, csvPlaces)
 
+	fullUrl := *baseUrl + *apiVersion
 	if categoriesDefined {
-		apiCategories, err := api.CreateCategories(*baseUrl, *apiVersion, csvCategories)
+		apiCategories, err := api.CreateCategories(fullUrl, csvCategories)
 		if err != nil {
 			fmt.Println("Error during add categories api call:", err)
 		}
-		apiPlaces, err := api.CreatePlaces(*baseUrl, *apiVersion, apiCategories, csvPlaces)
+		matchedPlaces := utils.MatchPlaces(apiCategories, csvPlaces)
+
+		apiPlaces, err := api.CreatePlaces(fullUrl, matchedPlaces)
 		if err != nil {
 			fmt.Println("Error during add places api call:", err)
 		}
-		fmt.Printf("DB Places %v",apiPlaces)
+		if imagesExist {
+			matchedAssets := utils.MatchAssets(apiPlaces, assets)
+
+			if len(matchedAssets) > 0 {
+				err := api.AddAssets(fullUrl, matchedAssets)
+				if err != nil {
+					fmt.Println("Error during add assets api call:", err)
+				}
+			} else {
+				fmt.Println("Warning: No assets matched to places")
+			}
+		}
 	}
-
-	if imagesExists {
-
-	}
-}
-
-func fileExistsOrExit(file string) {
-	if _, err := os.Stat(file); err != nil {
-		fmt.Fprintln(os.Stderr, "Error: No", file, "found")
-		os.Exit(1)
-	} 
 }

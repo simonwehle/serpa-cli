@@ -7,19 +7,13 @@ import (
 	"serpa-cli/internal/utils"
 )
 
-func CreatePlaces(baseUrl, apiVersion string, dbCategories []types.Category, csvPlaces []types.Place) ([]types.Place, error) {
-	createdPlaces := make([]types.Place, 0, len(csvPlaces))
+func CreatePlaces(fullUrl string, matchedPlaces []types.Place) ([]types.Place, error) {
+	createdPlaces := make([]types.Place, 0, len(matchedPlaces))
 
-	for _, place := range csvPlaces {
-		for _, category := range dbCategories {
-			if category.Name == place.CategoryName {
-				place.CategoryID = category.CategoryID
-				break
-			}
-		}
-		url := fmt.Sprintf("%s%s/place", baseUrl, apiVersion)
+	queryUrl := fmt.Sprintf("%s/place", fullUrl)
+	for _, place := range matchedPlaces {
 
-		createdPlace, err := utils.DoPostRequest[types.Place](url, place)
+		createdPlace, err := utils.DoPostRequest[types.Place](queryUrl, place)
 		if err != nil {
 			return nil, fmt.Errorf("Error during post request: %w", err)
 		}
