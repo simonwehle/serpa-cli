@@ -3,6 +3,7 @@ package files
 import (
 	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,33 +12,50 @@ import (
 )
 
 func ReadCategoriesCSV(root, categoriesFile string) ([]types.Category, error) {
-	path := filepath.Join(root, categoriesFile)
-	f, err := os.Open(path)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error opening categories file:", err)
-		os.Exit(1)
-	}
-	defer f.Close()
-
-	r := csv.NewReader(f)
-	records, err := r.ReadAll()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error reading categories file:", err)
-		os.Exit(1)
-	}
-
-	var categories []types.Category
-	for _, rec := range records {
-    if len(rec) < 3 {
-		return nil, fmt.Errorf("File category.csv requires columns 'name,icon,color'")
+    path := filepath.Join(root, categoriesFile)
+    f, err := os.Open(path)
+    if err != nil {
+        return nil, fmt.Errorf("error opening categories file: %v", err)
     }
-    category := types.Category{
-        Name: strings.TrimSpace(rec[0]),
-        Icon: strings.TrimSpace(rec[1]),
-        Color: strings.TrimSpace(rec[2]),
-    }
-    categories = append(categories, category)
-}
+    defer f.Close()
 
-	return categories, nil
+    r := csv.NewReader(f)
+
+    header, err := r.Read()
+    if err != nil {
+        return nil, fmt.Errorf("error reading header from categories file: %v", err)
+    }
+
+    colIndex := make(map[string]int)
+    for i, colName := range header {
+        colIndex[strings.ToLower(strings.TrimSpace(colName))] = i
+    }
+
+    requiredCols := []string{"name", "icon", "color"}
+    for _, c := range requiredCols {
+        if _, ok := colIndex[c]; !ok {
+            return nil, fmt.Errorf("categories file missing required column '%s'", c)
+        }
+    }
+
+    var categories []types.Category
+    for {
+        record, err := r.Read()
+        if err == io.EOF {
+            break
+        }
+        if err != nil {
+            return nil, fmt.Errorf("error reading categories file: %v", err)
+        }
+
+        category := types.Category{
+            Name:  strings.TrimSpace(record[colIndex["name"]]),
+            Icon:  strings.TrimSpace(record[colIndex["icon"]]),
+            Color: strings.TrimSpace(record[colIndex["color"]]),
+        }
+
+        categories = append(categories, category)
+    }
+
+    return categories, nil
 }

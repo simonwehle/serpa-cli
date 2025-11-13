@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"serpa-cli/internal/api"
 	"serpa-cli/internal/files"
 	"serpa-cli/internal/utils"
 )
@@ -14,6 +15,7 @@ const version = "0.0.1"
 
 func Execute() {
 	baseUrl := flag.String("u", "", "Serpa Maps base url")
+	apiVersion := flag.String("a", "/api/v1", "API version")
 	showHelp := flag.Bool("h", false, "Show this help message")
 	showVersion := flag.Bool("v", false, "Show version")
 
@@ -40,7 +42,7 @@ func Execute() {
 	}
 
 	if *baseUrl == "" {
-		fmt.Fprintln(os.Stderr, "Error: Serpa Maps server base url must be set. Set it using -u (base-url)")
+		fmt.Fprintln(os.Stderr, "Error: Serpa Maps server base url must be not empty; set it using -u (base-url)")
 		os.Exit(1)
 	}
 
@@ -50,7 +52,7 @@ func Execute() {
 
 	fileExistsOrExit(categoriesFile)
 	fileExistsOrExit(placesFile)
-	fmt.Printf("Files categories.csv and places.csv exist scanning for images ...")
+	fmt.Printf("Files categories.csv and places.csv exist; scanning for images ...")
 
 	root := "."
 	folders, images, err := files.CountFoldersAndImages(root)
@@ -70,7 +72,24 @@ func Execute() {
 		fmt.Println("Error:", err)
 	}
 
-	fmt.Printf("CSV categories: %s", csvCategories)
+	csvPlaces, err := files.ReadPlacesCSV(root, placesFile)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+
+	categoriesDefined, err := utils.CategoriesDefined(csvCategories, csvPlaces)
+
+	if categoriesDefined {
+		apiCategories, err := api.CreateCategories(*baseUrl, *apiVersion, csvCategories)
+		if err != nil {
+			fmt.Println("Error during add categories api call:", err)
+		}
+		apiPlaces, err := api.CreatePlaces(*baseUrl, *apiVersion, apiCategories, csvPlaces)
+		if err != nil {
+			fmt.Println("Error during add places api call:", err)
+		}
+		fmt.Printf("DB Places %v",apiPlaces)
+	}
 
 	if imagesExists {
 
